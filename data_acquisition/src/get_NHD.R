@@ -49,9 +49,9 @@ get_NHD <- function(locations, yaml) {
     } else { # otherwise read in specified file
       polygons <- read_sf(file.path(yaml$poly_dir[1], yaml$poly_file[1])) 
       polygons <- st_zm(polygons)#drop z or m if present
-      polygons <- st_make_valid(polygons)
+      polygons <- st_make_valid(polygons) %>% 
+        rename(r_id = yaml$unique_id) 
       st_drop_geometry(polygons) %>% 
-        rename(r_id = yaml$unique_id) %>% 
         mutate(py_id = r_id - 1) %>% #subtract 1 so that it matches with Py output
         write_csv(., "data_acquisition/out/user_polygon_withrowid.csv")
       st_write(polygons, "data_acquisition/out/user_polygon.shp", append = F)

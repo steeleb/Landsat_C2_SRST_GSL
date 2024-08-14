@@ -85,8 +85,15 @@ If you wish to run the example_config.yml pull, you will need to change the foll
 
 ```{r run_targets, echo = F}
 library(targets)
+library(sf)
+
+# format the shapefile to drop null geometry
+shapefile <- read_sf('data_in/Shapefile HM.shp')
+shapefile_dropone <- shapefile %>% filter(fid < 5)
+write_sf(shapefile_dropone, 'data_in/GSL_dropone.shp')
 
 {
+  
   tar_make()
   
   tar_visnetwork()

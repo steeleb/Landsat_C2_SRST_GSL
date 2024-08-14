@@ -1,6 +1,7 @@
 #import modules
 import ee
 import time
+import fiona
 from datetime import date, datetime
 import os 
 from pandas import read_csv
@@ -1080,7 +1081,7 @@ def ref_pull_89_DSWE3(image):
   Returns:
       summaries for band data within any given geometry area where the DSWE value is 3
   """
-# process image with the radsat mask
+  # process image with the radsat mask
   r = add_rad_mask(image).select('radsat')
   # process image with cfmask
   f = cf_mask(image).select('cfmask')
@@ -1092,7 +1093,7 @@ def ref_pull_89_DSWE3(image):
   h = calc_hill_shades(image, wrs.geometry()).select('hillShade')
   #calculate hillshadow
   hs = calc_hill_shadows(image, wrs.geometry()).select('hillShadow')
-
+  
   #apply dswe function
   d = DSWE(image).select('dswe')
   gt0 = (d.gt(0).rename('dswe_gt0')
@@ -1265,7 +1266,7 @@ if 'site' in extent:
   locs_feature = csv_to_eeFeat(locations, yml['location_crs'][0])
 
 
-if 'poly' in extent:
+if 'polygon' in extent:
   #if polygon is in extent, check for shapefile
   shapefile = yml['polygon'][0]
   # if shapefile provided by user 
@@ -1287,13 +1288,19 @@ if 'poly' in extent:
   poly_feat = ee.FeatureCollection(features)
 
 
-if 'center' in extent:
+if 'polycenter' in extent:
   if yml['polygon'][0] == True:
-    centers_csv = read_csv('data_acquisition/out/user_polygon_centers.csv')
+    centers_csv = read_csv('data_acquisition/out/user_polygon_centers.csv') 
+    centers_csv = (centers_csv.rename(columns={'poi_latitude': 'Latitude', 
+      'poi_longitude': 'Longitude',
+      'r_id': 'id'}))
     # load the shapefile into a Fiona object
-    centers = csv_to_eeFeat(centers_csv, yml['poly_crs'][0])
+    centers = csv_to_eeFeat(centers_csv, 'EPSG:4326')
   else: #otherwise use the NHDPlus file
     centers_csv = read_csv('data_acquisition/out/NHDPlus_polygon_centers.csv')
+    centers_csv = (centers_csv.rename(columns={'poi_latitude': 'Latitude', 
+      'poi_longitude': 'Longitude',
+      'r_id': 'id'}))
     centers = csv_to_eeFeat(centers_csv, 'EPSG:4326')
   # Create an ee.FeatureCollection from the ee.Features
   ee_centers = ee.FeatureCollection(centers)    
@@ -1388,16 +1395,17 @@ for e in extent:
     feat = (locs_feature
       .filterBounds(geo)
       .map(dp_buff))
-    if e == 'poly':
-      ## get the polygon stack ##
-      feat = (poly_feat
-        .filterBounds(geo))
-      if e == 'center':
-        ## get centers feature and buffer ##
-        feat = (ee_centers
-          .filterBounds(geo)
-          .map(dp_buff))
-      else: print('Extent not identified. Check configuration file.')
+  elif e == 'polygon':
+    ## get the polygon stack ##
+    feat = (poly_feat
+      .filterBounds(geo))
+  elif e == 'polycenter':
+    ## get centers feature and buffer ##
+    feat = (ee_centers
+      .filterBounds(geo)
+      .map(dp_buff))
+  else: 
+    print('Extent not identified. Check configuration file.')
   
   ## process 457 stack
   #snip the ls data by the geometry of the location points    
@@ -1541,11 +1549,11 @@ for e in extent:
     feat = (locs_feature
       .filterBounds(geo)
       .map(dp_buff))
-    if e == 'poly':
+    if e == 'polygon':
       ## get the polygon stack ##
       feat = (poly_feat
         .filterBounds(geo))
-      if e == 'center':
+      if e == 'polycenter':
         ## get centers feature and buffer ##
         feat = (ee_centers
           .filterBounds(geo)
@@ -1615,7 +1623,7 @@ for e in extent:
       locs_dataOut_89_D1a.start()
       print('Completed Landsat 8, 9 DSWE 1a stack acquisitions for ' + e + ' configuration at tile ' + str(tiles))
     else:
-      print("Not configured to acquire DSWE 1a stack for Landsat 8, 9 for ' + e + ' configuration")
+      print("Not configured to acquire DSWE 1a stack for Landsat 8, 9 for " + e + " configuration")
       print('Starting Landsat 8, 9 DSWE1 acquisition for ' + e + ' configuration at tile ' + str(tiles))
       locs_out_89_D1 = locs_stack_ls89.map(ref_pull_89_DSWE1).flatten()
       locs_out_89_D1 = locs_out_89_D1.filter(ee.Filter.notNull(['med_Blue']))

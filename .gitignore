@@ -13,8 +13,6 @@ data_acquisition/down/*
 data_acquisition/mid/*
 data_acquisition/out/*
 
-# output directory where output feather files are stored
-data_out/*
 
 # dumb .DS_Store
 **.DS_Store

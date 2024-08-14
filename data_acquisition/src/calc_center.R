@@ -35,6 +35,9 @@ calc_center <- function(poly, yaml) {
       # Xiao Yang's code in EE - Yang, Xiao. (2020). Deepest point calculation 
       # for any given polygon using Google Earth Engine JavaScript API 
       # (Version v1). Zenodo. https://doi.org/10.5281/zenodo.4136755
+      if (yaml$poly_crs != "EPSG:4326") {
+        one_wbd <- st_transform(one_wbd, "EPSG:4326")
+      }
       coord_for_UTM <- one_wbd %>% st_coordinates()
       mean_x <- mean(coord_for_UTM[ ,1])
       mean_y <- mean(coord_for_UTM[ ,2])

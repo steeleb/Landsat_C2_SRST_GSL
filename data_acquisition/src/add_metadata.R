@@ -8,16 +8,13 @@
 #' @param file_prefix specified string that matches the file group to collate
 #' @param version_identifier user-specified string to identify the RS pull these
 #' data are associated with
-#' @param collation_identifier user-specified string to identify the output of this
-#' target
 #' @returns silently creates collated .feather files from 'mid' folder and 
 #' dumps into 'data'
 #' 
 #' 
 add_metadata <- function(yaml,
                          file_prefix, 
-                         version_identifier,
-                         collation_identifier) {
+                         version_identifier) {
   
   files <- list.files(file.path("data_acquisition/mid/"),
                      pattern = file_prefix,
@@ -76,8 +73,13 @@ add_metadata <- function(yaml,
         rename(r_id = yaml$unique_id)%>% 
         mutate(r_id = as.character(r_id))
     } else if (e == "polycenter") {
-      spatial_info <- read_csv("data_acquisition/out/NHDPlus_polygon_centers.csv") %>% 
-        mutate(r_id = as.character(r_id))
+      if (yaml$polygon) {
+        spatial_info <- read_csv("data_acquisition/out/user_polygon_withrowid.csv") %>% 
+          mutate(r_id = as.character(r_id))
+      } else {
+        spatial_info <- read_csv("data_acquisition/out/NHDPlus_polygon_centers.csv") %>% 
+          mutate(r_id = as.character(r_id))
+      }
     } else if (e == "polygon") {
       if (yaml$polygon) {
         spatial_info <- read_sf(file.path(yaml$poly_dir,
@@ -105,10 +107,12 @@ add_metadata <- function(yaml,
                                      parsed_sub <- unlist(parsed)[1:(str_len-1)]
                                      str_flatten(parsed_sub, collapse = '_')
                                      })
+    dswe_location <- str_locate(df$source[1], "DSWE")
     df <- df %>% 
       select(-`system:index`) %>% 
       left_join(., metadata_light) %>% 
-      mutate(DSWE = str_split(source, "_")[[1]][7], .by = source) %>% 
+      mutate(DSWE = str_sub(source, dswe_location[1], dswe_location[2]+2)) %>% 
+      mutate(DSWE = str_remove(DSWE, "_")) %>% 
       left_join(., spatial_info)
     
     # break out the DSWE 1 data
@@ -121,7 +125,7 @@ add_metadata <- function(yaml,
                                      "_collated_DSWE1_",
                                      ext,
                                      "_meta_v",
-                                     collation_identifier,
+                                     version_identifier,
                                      ".feather")))
     } 
     
@@ -135,7 +139,7 @@ add_metadata <- function(yaml,
                                      "_collated_DSWE1a_",
                                      ext, 
                                      "_meta_v",
-                                     collation_identifier,
+                                     version_identifier,
                                      ".feather")))
     }
     
@@ -149,7 +153,7 @@ add_metadata <- function(yaml,
                                      "_collated_DSWE3_",
                                      ext,
                                      "_meta_v",
-                                     collation_identifier,
+                                     version_identifier,
                                      ".feather")))
     }
   })
@@ -159,7 +163,7 @@ add_metadata <- function(yaml,
              pattern = file_prefix,
              full.names = TRUE) %>% 
     #but make sure they are the specified version
-    .[grepl(collation_identifier, .)] %>% 
+    .[grepl(version_identifier, .)] %>% 
     .[!grepl('filtered', .)]
   
 }
