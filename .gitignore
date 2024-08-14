@@ -1,0 +1,23 @@
+# general R stuff
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# python environment files
+env/
+
+#additional files in 'in', 'down', 'mid', 'out' folders
+data_acquisition/in/*.csv
+data_acquisition/down/*
+data_acquisition/mid/*
+data_acquisition/out/*
+
+# output directory where output feather files are stored
+data_out/*
+
+# dumb .DS_Store
+**.DS_Store
+
+# targets folder
+_targets/
