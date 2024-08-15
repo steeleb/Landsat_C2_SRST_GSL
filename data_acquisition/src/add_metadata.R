@@ -65,7 +65,13 @@ add_metadata <- function(yaml,
     # get file using ext
     file <- files[grepl(ext, files)]
     # load file
-    df <- read_feather(file)
+    df <- read_feather(file) %>% 
+      mutate(mission = case_when(grepl("LT04", `system:index`) ~ "LANDSAT_4",
+                                 grepl("LT05", `system:index`) ~ "LANDSAT_5",
+                                 grepl("LE07", `system:index`) ~ "LANDSAT_7",
+                                 grepl("LC08", `system:index`) ~ "LANDSAT_8",
+                                 grepl("LC09", `system:index`) ~ "LANDSAT_9",
+                                 TRUE ~ NA_character_)) 
     
     if (e == "site") {
       spatial_info <- read_csv(file.path(yaml$data_dir,
@@ -91,14 +97,14 @@ add_metadata <- function(yaml,
           mutate(r_id = as.character(r_id))
       }
     }
+    
     # format system index for join - right now it has a rowid and the unique LS id
     # could also do this rowwise, but this method is a little faster
     df$r_id <- map_chr(.x = df$`system:index`, 
                             function(.x) {
                               parsed <- str_split(.x, '_')
-                              str_len <- length(unlist(parsed))
-                              unlist(parsed)[str_len]
-                            })
+                              last(unlist(parsed))
+                            }) 
     df$system.index <- map_chr(.x = df$`system:index`, 
                                    #function to grab the system index
                                    function(.x) {
@@ -107,11 +113,24 @@ add_metadata <- function(yaml,
                                      parsed_sub <- unlist(parsed)[1:(str_len-1)]
                                      str_flatten(parsed_sub, collapse = '_')
                                      })
-    dswe_location <- str_locate(df$source[1], "DSWE")
+    
+    # dswe info is stored differently in each mission group because of character length
+    # so grab out mission-specific dswe info and use that to define dswe
+    mission_dswe <- df %>% 
+      group_by(mission) %>% 
+      slice(1) %>% 
+      ungroup()
+    dswe_loc <- as_tibble(str_locate(mission_dswe$source, "DSWE")) %>% 
+      rowid_to_column() %>% 
+      left_join(., mission_dswe %>% rowid_to_column()) %>% 
+      select(rowid, mission, start, end) %>% 
+      mutate(end = end + 2)
+      
     df <- df %>% 
       select(-`system:index`) %>% 
       left_join(., metadata_light) %>% 
-      mutate(DSWE = str_sub(source, dswe_location[1], dswe_location[2]+2)) %>% 
+      left_join(., dswe_loc) %>% 
+      mutate(DSWE = str_sub(source, start, end), .by = mission) %>% 
       mutate(DSWE = str_remove(DSWE, "_")) %>% 
       left_join(., spatial_info)
     

@@ -100,4 +100,14 @@ write_sf(shapefile_dropone, 'data_in/GSL_dropone.shp')
 }
 ```
 
+## Apply Correction Coefficients
+
+Without intermission hand offs applied, sensor differences between missions create
+some data artifacts that make it look like there is a trend in the data that 
+doesn't actually exist. This application uses John Gardener's coefficients, which
+are not currently citable (to my knowledge) but should be shortly.
+
+```{r}
+source('apply_correction_coefficients.R')
+```
 
