@@ -12,6 +12,7 @@ data_acquisition/in/*.csv
 data_acquisition/down/*
 data_acquisition/mid/*
 data_acquisition/out/*
+!data_acquisition/out/user_polygon_centers.csv
 
 
 # dumb .DS_Store
